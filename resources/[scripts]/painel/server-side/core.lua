@@ -278,54 +278,54 @@ end
 -- PERMISSIONS
 -----------------------------------------------------------------------------------------------------------------------------------------
 function Creative.Permissions()
-	local source = source
-	local Passport = vRP.Passport(source)
-	local Group = Passport and Permission[Passport]
-	if not Passport or not Group then
-		return false
-	end
+    local source = source
+    local Passport = vRP.Passport(source)
+    local Group = Passport and Permission[Passport]
+    if not Passport or not Group then
+        return false
+    end
 
-	local Level = vRP.HasPermission(Passport,Group)
-	if not Level or Level ~= 1 then
-		return false
-	end
+    local Level = vRP.HasPermission(Passport,Group)
+    if not Level or Level ~= 1 then
+        return false
+    end
 
-	local Hierarchy = vRP.Hierarchy(Group)
-	local Stored = vRP.GetSrvData("Painel:Permissions:"..Group,true) or {}
-	local MetaData = type(Stored) == "table" and Stored.__Meta
-	local Version = type(MetaData) == "table" and MetaData.Version or 0
-	local Response = {}
+    local Hierarchy = vRP.Hierarchy(Group)
+    local Stored = vRP.GetSrvData("Painel:Permissions:"..Group, true) or {}
+    local MetaData = type(Stored) == "table" and Stored.__Meta
+    local Version = type(MetaData) == "table" and MetaData.Version or 0
+    local Response = {}
 
-	for Index = 1,#Hierarchy do
-		local Key = tostring(Index)
-		local DefaultPermission = Index == 1
-		local Template = {
-			Management = { View = DefaultPermission, Create = DefaultPermission, Edit = DefaultPermission, Dismiss = DefaultPermission },
-			Announcements = { Create = DefaultPermission, Edit = DefaultPermission, Delete = DefaultPermission },
-			Tags = { View = DefaultPermission, Create = DefaultPermission, Assign = DefaultPermission, Edit = DefaultPermission, Delete = DefaultPermission },
-			Bank = { View = DefaultPermission, Deposit = DefaultPermission, Withdraw = DefaultPermission, Transfer = DefaultPermission },
-			Goals = { MyGoals = DefaultPermission, All = DefaultPermission, Edit = DefaultPermission },
-			Perks = DefaultPermission
-		}
+    for Index = 1,#Hierarchy do
+        local Key = tostring(Index)
+        local DefaultPermission = Index == 1
+        local Template = {
+            Management = { View = DefaultPermission, Create = DefaultPermission, Edit = DefaultPermission, Dismiss = DefaultPermission },
+            Announcements = { Create = DefaultPermission, Edit = DefaultPermission, Delete = DefaultPermission },
+            Tags = { View = DefaultPermission, Create = DefaultPermission, Assign = DefaultPermission, Edit = DefaultPermission, Delete = DefaultPermission },
+            Bank = { View = DefaultPermission, Deposit = DefaultPermission, Withdraw = DefaultPermission, Transfer = DefaultPermission },
+            Goals = { MyGoals = DefaultPermission, All = DefaultPermission, Edit = DefaultPermission },
+            Perks = DefaultPermission
+        }
+		
+        if Version >= 1 and type(Stored[Key]) == "table" then
+            for Category,Value in pairs(Stored[Key]) do
+                if type(Template[Category]) == "table" and type(Value) == "table" then
+                    for SubKey,SubValue in pairs(Value) do
+                        if type(Template[Category][SubKey]) == "boolean" then
+                            Template[Category][SubKey] = SubValue and true or false
+                        end
+                    end
+                elseif type(Template[Category]) == "boolean" then
+                    Template[Category] = Value and true or false
+                end
+            end
+        end
 
-		if Version >= 1 and type(Stored[Key]) == "table" then
-			for Category,Value in pairs(Stored[Key]) do
-				if type(Template[Category]) == "table" and type(Value) == "table" then
-					for SubKey,SubValue in pairs(Value) do
-						if type(Template[Category][SubKey]) == "boolean" then
-							Template[Category][SubKey] = SubValue and true or false
-						end
-					end
-				elseif type(Template[Category]) == "boolean" then
-					Template[Category] = Value and true or false
-				end
-			end
-		end
+        Response[Key] = Template
+    end
 
-		Response[Key] = Template
-	end
-
-	return Response
+    return Response
 end
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- SAVEPERMISSIONS
@@ -334,7 +334,8 @@ function Creative.SavePermissions(Data)
 	local source = source
 	local Passport = vRP.Passport(source)
 	local Group = Passport and Permission[Passport]
-	if not Passport or not Group or not Data or type(Data.Permissions) ~= "table" then
+	
+	if not Passport or not Group or not Data or type(Data) ~= "table" then
 		return false
 	end
 
@@ -358,8 +359,8 @@ function Creative.SavePermissions(Data)
 			Perks = DefaultPermission
 		}
 
-		if type(Data.Permissions[Key]) == "table" then
-			for Category,Value in pairs(Data.Permissions[Key]) do
+		if type(Data[Key]) == "table" then
+			for Category,Value in pairs(Data[Key]) do
 				if type(Template[Category]) == "table" and type(Value) == "table" then
 					for SubKey,SubValue in pairs(Value) do
 						if type(Template[Category][SubKey]) == "boolean" then
@@ -518,46 +519,50 @@ end
 -- HIERARCHY
 -----------------------------------------------------------------------------------------------------------------------------------------
 function Creative.Hierarchy(Data)
-	local source = source
-	local Passport = vRP.Passport(source)
-	local Group = Passport and Permission[Passport]
-	if not Passport or not Group or not Data or not Data.Passport or not Data.Mode then
-		return false
-	end
+    local source = source
+    local Passport = vRP.Passport(source)
+    local Group = Passport and Permission[Passport]
+    if not Passport or not Group or not Data or not Data.Passport or not Data.Mode then
+        return false
+    end
 
-	local Level = vRP.HasPermission(Passport,Group)
-	if not Level then
-		return false
-	end
+    local Level = vRP.HasPermission(Passport,Group)
+    if not Level then
+        return false
+    end
 
-	local StoredPermissions = vRP.GetSrvData("Painel:Permissions:"..Group,true) or {}
-	local MetaData = type(StoredPermissions) == "table" and StoredPermissions.__Meta
-	local Version = type(MetaData) == "table" and MetaData.Version or 0
-	local Allowed = Level == 1
-	if Version >= 1 then
-		local LevelData = StoredPermissions[tostring(Level)]
-		if type(LevelData) == "table" then
-			local Category = LevelData.Management
-			if type(Category) == "table" then
-				local Value = Category.Edit
-				if type(Value) == "boolean" then
-					Allowed = Value
-				end
-			elseif type(Category) == "boolean" then
-				Allowed = Category
-			end
-		end
-	end
+    local StoredPermissions = vRP.GetSrvData("Painel:Permissions:"..Group,true) or {}
+    local MetaData = type(StoredPermissions) == "table" and StoredPermissions.__Meta
+    local Version = type(MetaData) == "table" and MetaData.Version or 0
+    local Allowed = Level == 1
+    if Version >= 1 then
+        local LevelData = StoredPermissions[tostring(Level)]
+        if type(LevelData) == "table" then
+            local Category = LevelData.Management
+            if type(Category) == "table" then
+                local Value = Category.Edit
+                if type(Value) == "boolean" then
+                    Allowed = Value
+                end
+            elseif type(Category) == "boolean" then
+                Allowed = Category
+            end
+        end
+    end
 
-	if not Allowed then
-		TriggerClientEvent("painel:Notify",source,"Atencao","Você não possui permissão.","amarelo")
-		return false
-	end
+    if not Allowed then
+        TriggerClientEvent("painel:Notify",source,"Atencao","Você não possui permissão.","amarelo")
+        return false
+    end
 
-	local Text = Data.Mode == "Promote" and "promovido" or "rebaixado"
-	vRP.SetPermission(Data.Passport,Group,Passport,Data.Mode)
-	TriggerClientEvent("Notify",vRP.Source(Data.Passport),Group,"Você foi <b>"..Text.."</b> do seu cargo atual.","verde",5000)
-	return true
+    local Text = Data.Mode == "Promote" and "promovido" or "rebaixado"
+    vRP.SetPermission(Data.Passport,Group,Passport,Data.Mode)
+    local TargetSource = vRP.Source(Data.Passport)
+    if TargetSource then
+        TriggerClientEvent("Notify",TargetSource,Group,"Você foi <b>"..Text.."</b> do seu cargo atual.","verde",5000)
+    end
+
+    return true
 end
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- DISMISS
