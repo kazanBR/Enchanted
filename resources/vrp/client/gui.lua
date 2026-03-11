@@ -32,7 +32,8 @@ LocalPlayer["state"]:set("Banned",false,true)
 LocalPlayer["state"]:set("Prison",false,true)
 LocalPlayer["state"]:set("Races",false,false)
 LocalPlayer["state"]:set("Hoverfy",true,false)
-LocalPlayer["state"]:set("Bennys",false,false)
+LocalPlayer["state"]:set("Mecanica",false,false)
+LocalPlayer["state"]:set("Mecanicanorte",false,false)
 LocalPlayer["state"]:set("Freecam",false,false)
 LocalPlayer["state"]:set("Handcuff",false,true)
 LocalPlayer["state"]:set("Commands",false,true)
@@ -414,6 +415,71 @@ RegisterCommand("binds",function(source,Message)
 	end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------
+-- BINDS
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("Binds1",function(source,Message)
+	local Ped = PlayerPedId()
+	if LocalPlayer["state"]["Active"] and GetGameTimer() >= Button and not IsPauseMenuActive() and not LocalPlayer["state"]["Buttons"] and not LocalPlayer["state"]["usingPhone"] and GetEntityHealth(Ped) > 100 and not LocalPlayer["state"]["Cancel"] and not IsPedReloading(Ped) then
+		Button = GetGameTimer() + 500
+
+		if parseInt(Message[1]) >= 1 and parseInt(Message[1]) <= 5 then
+			TriggerEvent("inventory:Use",Message[1],1)
+		elseif Message[1] == "6" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				if IsEntityPlayingAnim(Ped,"anim@heists@heist_corona@single_team","single_team_loop_boss",3) then
+					StopAnimTask(Ped,"anim@heists@heist_corona@single_team","single_team_loop_boss",8.0)
+					tvRP.AnimActive()
+				else
+					tvRP.playAnim(true,{"anim@heists@heist_corona@single_team","single_team_loop_boss"},true)
+				end
+			end
+		elseif Message[1] == "7" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				if IsEntityPlayingAnim(Ped,"mini@strip_club@idles@bouncer@base","base",3) then
+					StopAnimTask(Ped,"mini@strip_club@idles@bouncer@base","base",8.0)
+					tvRP.AnimActive()
+				else
+					tvRP.playAnim(true,{"mini@strip_club@idles@bouncer@base","base"},true)
+				end
+			end
+		elseif Message[1] == "8" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				if IsEntityPlayingAnim(Ped,"anim@mp_player_intupperfinger","idle_a_fp",3) then
+					StopAnimTask(Ped,"anim@mp_player_intupperfinger","idle_a_fp",8.0)
+					tvRP.AnimActive()
+				else
+					tvRP.playAnim(true,{"anim@mp_player_intupperfinger","idle_a_fp"},true)
+				end
+			end
+		elseif Message[1] == "9" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				if IsEntityPlayingAnim(Ped,"random@arrests@busted","idle_a",3) then
+					StopAnimTask(Ped,"random@arrests@busted","idle_a",8.0)
+					tvRP.AnimActive()
+				else
+					tvRP.playAnim(true,{"random@arrests@busted","idle_a"},true)
+				end
+			end
+		elseif Message[1] == "left" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] and not LocalPlayer["state"]["Blackjack"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				tvRP.playAnim(true,{"anim@mp_player_intupperthumbs_up","enter"},false)
+			end
+		elseif Message[1] == "right" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] and not LocalPlayer["state"]["Blackjack"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				tvRP.playAnim(true,{"anim@mp_player_intcelebrationmale@face_palm","face_palm"},false)
+			end
+		elseif Message[1] == "up" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] and not LocalPlayer["state"]["Blackjack"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				tvRP.playAnim(true,{"anim@mp_player_intcelebrationmale@salute","salute"},false)
+			end
+		elseif Message[1] == "down" and not LocalPlayer["state"]["Handcuff"] and not LocalPlayer["state"]["Commands"] and not LocalPlayer["state"]["Blackjack"] then
+			if not IsPedInAnyVehicle(Ped) and not IsPedArmed(Ped,7) and not IsPedSwimming(Ped) then
+				tvRP.playAnim(true,{"rcmnigel1c","hailing_whistle_waive_a"},false)
+			end
+		end
+	end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
 -- LOCK
 -----------------------------------------------------------------------------------------------------------------------------------------
 RegisterCommand("Lock",function()
@@ -487,6 +553,15 @@ RegisterKeyMapping("Invbind 100","Interação do botão 1.","keyboard","1")
 RegisterKeyMapping("Invbind 101","Interação do botão 2.","keyboard","2")
 RegisterKeyMapping("Invbind 102","Interação do botão 3.","keyboard","3")
 RegisterKeyMapping("Invbind 103","Interação do botão 4.","keyboard","4")
+
+RegisterKeyMapping("Binds1 6","Interação do botão 6.","keyboard","6")
+RegisterKeyMapping("Binds1 7","Interação do botão 7.","keyboard","7")
+RegisterKeyMapping("Binds1 8","Interação do botão 8.","keyboard","8")
+RegisterKeyMapping("Binds1 9","Interação do botão 9.","keyboard","9")
+RegisterKeyMapping("Binds1 left","Interação da seta esquerda.","keyboard","LEFT")
+RegisterKeyMapping("Binds1 right","Interação da seta direita.","keyboard","RIGHT")
+RegisterKeyMapping("Binds1 up","Interação da seta pra cima.","keyboard","UP")
+RegisterKeyMapping("Binds1 down","Interação da seta pra baixo.","keyboard","DOWN")
 
 RegisterKeyMapping("NumBinds 0","Interação de animação 0.","keyboard","NUMPAD0")
 RegisterKeyMapping("NumBinds 1","Interação de animação 1.","keyboard","NUMPAD1")

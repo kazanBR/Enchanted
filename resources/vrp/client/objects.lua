@@ -23,10 +23,17 @@ end
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- OBJECTS:TABLE
 -----------------------------------------------------------------------------------------------------------------------------------------
+local ObjectsBlips = {}
+
 RegisterNetEvent("objects:Table")
 AddEventHandler("objects:Table",function(Data)
 	Objects = Data or {}
-
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- OBJECTS:BLIPS
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterNetEvent("objects:Blips")
+AddEventHandler("objects:Blips",function()
 	local Colors = {
 		LootMedics = 76,
 		LootWeapons = 52,
@@ -34,31 +41,50 @@ AddEventHandler("objects:Table",function(Data)
 		LootLegendary = 81
 	}
 
-	for Number,Data in pairs(Objects) do
-		local Mode = Data.Mode
-		if not Mode then
-			goto continue
+	if next(ObjectsBlips) ~= nil then
+		for Number,Blip in pairs(ObjectsBlips) do
+			if DoesBlipExist(Blip) then
+				RemoveBlip(Blip)
+			end
+
+			if Sprays and Sprays[Number] then
+				Sprays[Number].Blip = nil
+			end
 		end
 
-		local x,y,z = Data.Coords[1],Data.Coords[2],Data.Coords[3]
+		ObjectsBlips = {}
+		TriggerEvent("Notify","Caixas","Marcações desativadas.","default",10000)
+	else
+		for Number,Data in pairs(Objects) do
+			local Mode = Data.Mode
+			if not Mode then
+				goto continue
+			end
 
-		local Color = Colors[Mode]
-		if Color then
-			local Blip = AddBlipForRadius(x,y,z,25.0)
-			SetBlipAlpha(Blip,200)
-			SetBlipColour(Blip,Color)
-		elseif Mode == "Sprays" then
-			Sprays[Number] = Sprays[Number] or {}
-			local Blip = AddBlipForRadius(x,y,z,250.0)
+			local x,y,z = Data.Coords[1],Data.Coords[2],Data.Coords[3]
 
-			SetBlipColour(Blip,Data.Color)
-			SetBlipAlpha(Blip,150)
+			local Color = Colors[Mode]
+			if Color then
+				local Blip = AddBlipForRadius(x,y,z,25.0)
+				SetBlipAlpha(Blip,200)
+				SetBlipColour(Blip,Color)
+				ObjectsBlips[Number] = Blip
+			elseif Mode == "Sprays" then
+				Sprays[Number] = Sprays[Number] or {}
+				local Blip = AddBlipForRadius(x,y,z,250.0)
 
-			Sprays[Number].Blip = Blip
-			Sprays[Number].Permission = Data.Permission
+				SetBlipColour(Blip,Data.Color)
+				SetBlipAlpha(Blip,150)
+
+				Sprays[Number].Blip = Blip
+				Sprays[Number].Permission = Data.Permission
+				ObjectsBlips[Number] = Blip
+			end
+
+			::continue::
 		end
 
-		::continue::
+		TriggerEvent("Notify","Caixas","Marcações ativadas.","default",10000)
 	end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------

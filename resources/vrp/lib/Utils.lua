@@ -449,3 +449,14 @@ function ConvertStringToTable(String)
 
 	return Result
 end
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- HEXTORGB
+-----------------------------------------------------------------------------------------------------------------------------------------
+function HexToRGB(Hex)
+    Hex = Hex:gsub("#","")
+    if #Hex == 3 then
+        Hex = Hex:sub(1,1)..Hex:sub(1,1)..Hex:sub(2,2)..Hex:sub(2,2)..Hex:sub(3,3)..Hex:sub(3,3)
+    end
+
+    return tonumber(Hex:sub(1,2),16), tonumber(Hex:sub(3,4),16),tonumber(Hex:sub(5,6),16)
+end

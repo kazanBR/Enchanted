@@ -3,6 +3,8 @@
 -----------------------------------------------------------------------------------------------------------------------------------------
 local Tunnel = module("vrp","lib/Tunnel")
 local Proxy = module("vrp","lib/Proxy")
+local GarageSpawnVehicles = {}
+local CurrentRotationObject = nil
 vRPC = Tunnel.getInterface("vRP")
 vRP = Proxy.getInterface("vRP")
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -1059,7 +1061,7 @@ end)
 RegisterCommand("nc",function(source)
 	local Passport = vRP.Passport(source)
 	if Passport and vRP.HasGroup(Passport,"Admin") then
-		TriggerClientEvent("creative-admin:toggleNoClip", source)
+		TriggerClientEvent("creative:NoClip", source)
 	end
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -1371,6 +1373,12 @@ RegisterCommand("console",function(source,Message,History)
 	if source == 0 then
 		TriggerClientEvent("Notify",-1,"Prefeitura",History:sub(8),"default",60000,"bottom-center")
 	end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- TXADMIN:EVENTS:SERVERSHUTTINGDOWN
+-----------------------------------------------------------------------------------------------------------------------------------------
+AddEventHandler("txAdmin:events:serverShuttingDown",function()
+    TriggerEvent("SaveServer")
 end)
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- KICKALL
@@ -1920,4 +1928,543 @@ RegisterCommand("blackout",function(source,Message)
 	if Passport and vRP.HasGroup(Passport,"Admin") then
 		GlobalState.Blackout = not GlobalState.Blackout
 	end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- GETPERMISSIONS
+-----------------------------------------------------------------------------------------------------------------------------------------
+function Creative.GetPermissions()
+	local Permissions = {}
+	if Groups then
+		for Permission,Data in pairs(Groups) do
+			Permissions[#Permissions + 1] = { Label = Data.Name or Permission, Value = Permission }
+		end
+	end
+	return Permissions
+end
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- TXADMIN:EVENTS:SERVERSHUTTINGDOWN
+-----------------------------------------------------------------------------------------------------------------------------------------
+AddEventHandler("txAdmin:events:serverShuttingDown",function()
+    TriggerEvent("SaveServer")
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- WL
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("wl",function(source,Message,rawCommand)
+    local Passport = vRP.Passport(source)
+    if Passport and vRP.HasGroup(Passport,"Admin") then
+        if Message[1] then
+            local OtherPassport = Message[1]
+    
+            exports.oxmysql:update_async("UPDATE accounts SET Whitelist = ? WHERE id = ?", { 1, OtherPassport })
+            
+            exports.discord:Embed("Wl","**[ADMIN]:** "..Passport.."\n**[ADICIONOU WL]:** "..OtherPassport)
+
+            TriggerClientEvent("Notify",source,"Sucesso","ID <b>"..OtherPassport.."</b> adicionado à Whitelist.","verde",5000)
+        else
+            TriggerClientEvent("Notify",source,"Aviso","Especifique o ID: /wl 1","amarelo",5000)
+        end
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- UNWL
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("unwl",function(source,Message,rawCommand)
+    local Passport = vRP.Passport(source)
+    if Passport and vRP.HasGroup(Passport,"Admin") then
+        if Message[1] then
+            local OtherPassport = Message[1]
+            
+            exports.oxmysql:update_async("UPDATE accounts SET Whitelist = ? WHERE id = ?", { 0, OtherPassport })
+            
+            exports.discord:Embed("Unwl","**[ADMIN]:** "..Passport.."\n**[REMOVEU WL]:** "..OtherPassport)
+
+            TriggerClientEvent("Notify",source,"Sucesso","ID <b>"..OtherPassport.."</b> removido da Whitelist.","verde",5000)
+        else
+            TriggerClientEvent("Notify",source,"Aviso","Especifique o ID: /unwl 1","amarelo",5000)
+        end
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- ALGEMA
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("algema",function(source,args,rawCommand)
+	local Passport = vRP.Passport(source)
+	if Passport then
+		if vRP.HasPermission(Passport,"Admin") then
+			local ClosestPed = nil
+
+			if args[1] then
+				ClosestPed = vRP.Source(parseInt(args[1]))
+			else
+				ClosestPed = vRPC.ClosestPed(source)
+			end
+
+			if ClosestPed then
+				local OtherPassport = vRP.Passport(ClosestPed)
+
+				if Player(ClosestPed).state.Handcuff then
+					Player(ClosestPed).state.Handcuff = false
+					Player(ClosestPed).state.Commands = false
+			
+					TriggerClientEvent("sounds:Private",source,"uncuff",0.5)
+					SetTimeout(100,function()
+						TriggerClientEvent("sounds:Private",ClosestPed,"uncuff",0.5)
+					end)
+
+					vRPC.Destroy(ClosestPed)
+					vRPC.Destroy(source)
+					
+					TriggerClientEvent("Notify",source,"Sucesso","Você <b>desalgemou</b> o passaporte <b>"..OtherPassport.."</b>.","verde",5000)
+				else
+					Player(ClosestPed).state.Handcuff = true
+					Player(ClosestPed).state.Commands = true
+					
+					TriggerClientEvent("inventory:Close",ClosestPed)
+					TriggerClientEvent("radio:RadioClean",ClosestPed)
+					
+					TriggerClientEvent("sounds:Private",source,"cuff",0.5)
+					SetTimeout(100,function()
+						TriggerClientEvent("sounds:Private",ClosestPed,"cuff",0.5)
+					end)
+
+					if not args[1] then
+						vRPC.playAnim(source,false,{"mp_arrest_paired","cop_p2_back_left"},false)
+						vRPC.playAnim(ClosestPed,false,{"mp_arrest_paired","crook_p2_back_left"},false)
+					else
+						vRPC.playAnim(ClosestPed,false,{"mp_arresting","idle"},true)
+					end
+
+					SetTimeout(3500,function()
+						vRPC.Destroy(ClosestPed)
+						vRPC.Destroy(source)
+					end)
+
+					TriggerClientEvent("Notify",source,"Sucesso","Você <b>algemou</b> o passaporte <b>"..OtherPassport.."</b>.","verde",5000)
+				end
+			else
+				TriggerClientEvent("Notify",source,"Importante","Nenhum jogador encontrado.","vermelho",5000)
+			end
+		end
+	end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- BAN
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("ban",function(source,Message)
+    local Passport = vRP.Passport(source)
+    if Passport and vRP.HasGroup(Passport,"Admin") then
+        local Keyboard = vKEYBOARD.Banned(source,"Passaporte","Motivo")
+        if Keyboard then
+            local OtherPassport = parseInt(Keyboard[1])
+            local Reason = Keyboard[2]
+            local Identity = vRP.Identity(OtherPassport)
+            if Identity and Identity.License then
+                local Account = vRP.Query("accounts/Account",{ License = Identity.License })
+                if Account[1] then
+                    local AccountID = Account[1].id
+                    vRP.Query("accounts/BannedPermanent",{ Account = AccountID, Reason = Reason })
+                    local OtherSource = vRP.Source(OtherPassport)
+                    if OtherSource then
+                        vRP.Kick(OtherSource,"Você foi banido permanentemente: "..Reason)
+                    end
+
+                    TriggerClientEvent("Notify",source,"Sucesso","Banimento PERMANENTE aplicado ao passaporte <b>"..OtherPassport.."</b>.","verde",5000)
+					
+                    exports.discord:Embed("Ban","**[ADMIN]:** "..Passport.."\n**[BANIU]:** "..OtherPassport.."\n**[MODO]:** Permanente".."\n**[RAZÃO]:** "..Reason)
+					
+                else
+                    TriggerClientEvent("Notify",source,"Erro","Conta não encontrada no banco de dados.","vermelho",5000)
+                end
+            else
+                TriggerClientEvent("Notify",source,"Erro","Passaporte inválido ou não encontrado.","vermelho",5000)
+            end
+        end
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- MOCHILA
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("mochila",function(source,args,rawCommand)
+    local Passport = vRP.Passport(source)
+    if Passport and vRP.HasGroup(Passport,"Admin",1) then
+        local OtherPassport = tonumber(args[1])
+        local Amount = tonumber(args[2])
+
+        if OtherPassport and Amount then
+            local Identity = vRP.Identity(OtherPassport)
+            local Name = "Desconhecido"
+
+            if Identity then
+                Name = Identity.Name.." "..Identity.Lastname
+            end
+
+            vRP.UpgradeWeight(OtherPassport,Amount,"+")
+            
+            TriggerClientEvent("Notify",source,"sucesso","Você adicionou <b>"..Amount.."kg</b> para <b>"..Name.."</b> (ID: "..OtherPassport..").","verde",5000)
+            
+            local OtherSource = vRP.Source(OtherPassport)
+            if OtherSource then
+                TriggerClientEvent("Notify",OtherSource,"Aviso","Sua mochila foi aumentada em <b>"..Amount.."kg</b>.","amarelo",5000)
+            end
+        else
+            TriggerClientEvent("Notify",source,"Aviso","Utilize: <b>/mochila [id] [quantidade]</b>","amarelo",5000)
+        end
+    end
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- STATUSPLAYER
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("statusplayer",function(source,Message)
+	local Passport = vRP.Passport(source)
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+		return
+	end
+
+	local Predestinado = Message[1] and parseInt(Message[1]) or nil
+	if not Predestinado or Predestinado <= 0 then
+		TriggerClientEvent("Notify",source,"Atenção","Use: /statusplayer [ID]","amarelo",5000)
+		return
+	end
+
+	local Identity = vRP.Identity(Predestinado)
+	if not Identity then
+		TriggerClientEvent("Notify",source,"Erro","Passaporte <b>"..Predestinado.."</b> não encontrado.","vermelho",5000)
+		return
+	end
+
+	local PlayerName = vRP.FullName(Predestinado)
+	local BankAmount = vRP.GetBank(Predestinado) or 0
+	local CashAmount = vRP.ItemAmount(Predestinado,"dollar") or 0
+	local TotalMoney = BankAmount + CashAmount
+
+	local Vehicles = vRP.Query("vehicles/UserVehicles",{ Passport = Predestinado })
+	local VehicleCount = Vehicles and #Vehicles or 0
+	local PropertyCount = vRP.Scalar("propertys/Count",{ Passport = Predestinado }) or 0
+
+	local License = Identity.License or vRP.License(Predestinado)
+	local GemstoneAmount = 0
+	if License then
+		local Account = vRP.Account(License)
+		if Account then
+			GemstoneAmount = Account.Gemstone or 0
+		end
+	end
+
+	local MessageText = string.format(
+		"<b>Nome:</b> %s<br>"..
+		"🆔 <b>ID Passaporte:</b> %d<br><br>"..
+		"💵 <b>Dinheiro em Mãos:</b> $%s<br>"..
+		"💰 <b>Dinheiro no Banco:</b> $%s<br>"..
+		"💸 <b>Total de Dinheiro:</b> $%s<br><br>"..
+		"🚗 <b>Total de Veículos:</b> %d<br>"..
+		"🏠 <b>Total de Casas:</b> %d<br>"..
+		"💎 <b>Gemas:</b> %s",
+		PlayerName,
+		Predestinado,
+		Dotted(CashAmount),
+		Dotted(BankAmount),
+		Dotted(TotalMoney),
+		VehicleCount,
+		PropertyCount,
+		Dotted(GemstoneAmount)
+	)
+
+	TriggerClientEvent("Notify",source,"Status Player",MessageText,"azul",10000)
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- ADDGARAGE
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("addgarage",function(source,Message)
+	local Passport = vRP.Passport(source)
+	if not Passport or not vRP.HasGroup(Passport,"Admin") then
+		return false
+	end
+
+	local MAX_SPAWNS = 20
+	local GARAGE_OBJECT_HASH = "prop_offroad_tyres02"
+	local VEHICLE_PREVIEW_HASH = "sultanrs"
+
+	local GarageTypes = {
+		{ Label = "Garage (Comum)", Value = "Garage|true" },
+		{ Label = "Policia", Value = "Policia|false" },
+		{ Label = "Paramedico", Value = "Paramedico|false" },
+		{ Label = "Helicopters", Value = "Helicopters|false" },
+		{ Label = "Boats", Value = "Boats|false" },
+		{ Label = "Bikes", Value = "Bikes|false" },
+		{ Label = "Trabalhos", Value = "Work|false" }
+	}
+
+	local MarkerTypes = {
+		{ Label = "Marker 33 (Avião)", Value = 33 },
+		{ Label = "Marker 34 (Helicóptero)", Value = 34 },
+		{ Label = "Marker 35 (Barco)", Value = 35 },
+		{ Label = "Marker 36 (Carro)", Value = 36 },
+		{ Label = "Marker 37 (Moto)", Value = 37 },
+		{ Label = "Marker 38 (Bike)", Value = 38 },
+		{ Label = "Marker 39 (Caminhão)", Value = 39 }
+	}
+
+	local InteriorTypes = {
+		{ Label = "Sem Interior", Value = "none" },
+		{ Label = "Interior 1", Value = "01" },
+		{ Label = "Interior 2", Value = "02" },
+		{ Label = "Interior 3", Value = "03" },
+		{ Label = "Interior 4", Value = "04" },
+		{ Label = "Interior 5", Value = "05" }
+	}
+
+	local Permissions = Creative.GetPermissions()
+	if not Permissions or #Permissions == 0 then
+		TriggerClientEvent("Notify",source,"Erro","Nenhuma permissão encontrada.","vermelho",5000)
+		return false
+	end
+
+	table.insert(Permissions, 1, { Label = "Sem Permissão (Pública)", Value = "none" })
+
+	local Results = vKEYBOARD.Garages(source,GarageTypes,Permissions,MarkerTypes,InteriorTypes)
+	
+	if not Results or #Results < 3 or not Results[1] or not Results[2] or not Results[3] then
+		return false
+	end
+
+	local GarageTypeData = Results[1]
+	local SelectedMarker = Results[3]
+	local SelectedInterior = Results[4]
+	local GarageTypeSplit = {}
+	for part in string.gmatch(GarageTypeData, "[^|]+") do
+		table.insert(GarageTypeSplit, part)
+	end
+	
+	if #GarageTypeSplit < 2 then
+		TriggerClientEvent("Notify",source,"Erro","Formato de tipo de garagem inválido.","vermelho",5000)
+		return false
+	end
+	
+	local GarageType = GarageTypeSplit[1] or "Garage"
+	local SavePosition = GarageTypeSplit[2] == "true"
+	local Permission = Results[2]
+	local MarkerId = tonumber(SelectedMarker) or 36
+
+	if not GarageType or GarageType == "" then
+		TriggerClientEvent("Notify",source,"Erro","Tipo de garagem inválido.","vermelho",5000)
+		return false
+	end
+
+	TriggerClientEvent("Notify",source,"Aviso","Selecione o local da garagem (blip).","amarelo",5000)
+
+	local Success,GarageCoords = vRPC.ObjectControlling(source,GARAGE_OBJECT_HASH)
+
+	if not Success or not GarageCoords or type(GarageCoords) ~= "table" or #GarageCoords < 3 then
+		TriggerClientEvent("Notify",source,"Aviso","Posicionamento do blip cancelado ou inválido.","vermelho",5000)
+		vCLIENT.ClearGarageSpawns(source)
+		return false
+	end
+
+	local Spawns = {}
+	local AddingSpawns = true
+	local SpawnCount = 0
+
+	while AddingSpawns do
+		SpawnCount = SpawnCount + 1
+		
+		if SpawnCount > MAX_SPAWNS then
+			TriggerClientEvent("Notify",source,"Aviso",("Limite máximo de %d vagas atingido!"):format(MAX_SPAWNS),"amarelo",5000)
+			AddingSpawns = false
+			break
+		end
+		
+		local HasSpawns = #Spawns > 0
+		TriggerClientEvent("admin:GarageButtons",source,HasSpawns)
+
+		local SuccessSpawn,SpawnCoords = vCLIENT.PositionGarageSpawn(source,VEHICLE_PREVIEW_HASH)
+
+		if SuccessSpawn and SpawnCoords and type(SpawnCoords) == "table" and #SpawnCoords >= 4 then
+			table.insert(Spawns,SpawnCoords)
+			TriggerClientEvent("Notify",source,"Sucesso",("Vaga %d adicionada!"):format(SpawnCount),"verde",3000)
+		else
+			SpawnCount = SpawnCount - 1
+			AddingSpawns = false
+		end
+	end
+
+	if #Spawns == 0 then
+		vCLIENT.ClearGarageSpawns(source)
+		TriggerClientEvent("Notify",source,"Aviso","Nenhuma vaga adicionada. Cancelado.","vermelho",5000)
+		return false
+	end
+
+	local SpawnLines = {}
+	for i, coords in ipairs(Spawns) do
+		local Line = string.format('\t\t\t["%d"] = { %.2f,%.2f,%.2f,%.2f }',
+			i, coords[1], coords[2], coords[3] + 1, coords[4])
+		if i < #Spawns then
+			Line = Line .. ","
+		end
+		table.insert(SpawnLines, Line)
+	end
+	local SpawnText = table.concat(SpawnLines, "\n")
+
+	local PermissionString = ""
+	if Permission and Permission ~= "none" then
+		if Permission == "custom" then
+			PermissionString = 'Permission = "CUSTOM_PERMISSION"'
+		else
+			PermissionString = string.format('Permission = "%s"', Permission)
+		end
+	else
+		PermissionString = string.format('Save = %s', SavePosition and "true" or "false")
+	end
+
+	local InteriorString = ""
+	if SelectedInterior and SelectedInterior ~= "none" then
+		InteriorString = string.format('\n\t\tInterior = "%s",', SelectedInterior)
+	end
+
+	local FullCode = string.format([[["ID"] = {
+		Name = "%s",
+		%s,
+		Marker = %d,
+		Coords = vec3(%.2f,%.2f,%.2f),%s
+		Spawns = {
+%s
+		}
+	},]],
+		GarageType,
+		PermissionString,
+		MarkerId,
+		GarageCoords[1], GarageCoords[2], GarageCoords[3] + 1,
+		InteriorString,
+		SpawnText
+	)
+
+	vKEYBOARD.Copy(source,"Código:",FullCode)
+	TriggerClientEvent("Notify",source,"Sucesso",("Código gerado com %d vaga(s)!"):format(#Spawns),"verde",10000)
+	
+	vCLIENT.ClearGarageSpawns(source)
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- ADDBED
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("addbed",function(source,Message)
+	local Passport = vRP.Passport(source)
+	if not Passport or not vRP.HasGroup(Passport,"Admin") then
+		return false
+	end
+
+	local MAX_BEDS = 50
+
+	local Beds = {}
+	local AddingBeds = true
+	local BedCount = 0
+
+	TriggerClientEvent("Notify",source,"Aviso","Comece a adicionar macas. Pressione F para finalizar.","amarelo",5000)
+
+	while AddingBeds do
+		BedCount = BedCount + 1
+		
+		if BedCount > MAX_BEDS then
+			TriggerClientEvent("Notify",source,"Aviso",("Limite máximo de %d macas atingido!"):format(MAX_BEDS),"amarelo",5000)
+			AddingBeds = false
+			break
+		end
+		
+		local HasBeds = #Beds > 0
+		TriggerClientEvent("admin:BedButtons",source,HasBeds)
+
+		local SuccessBed,BedCoords = vCLIENT.PositionBed(source)
+
+		if SuccessBed and BedCoords and type(BedCoords) == "table" and #BedCoords >= 4 then
+			table.insert(Beds,{
+				Coords = { BedCoords[1], BedCoords[2], BedCoords[3], BedCoords[4] }
+			})
+			
+			TriggerClientEvent("Notify",source,"Sucesso",("Maca %d adicionada!"):format(BedCount),"verde",3000)
+		else
+			BedCount = BedCount - 1
+			AddingBeds = false
+		end
+	end
+
+	if #Beds == 0 then
+		TriggerClientEvent("Notify",source,"Aviso","Nenhuma maca adicionada. Cancelado.","vermelho",5000)
+		return false
+	end
+
+	local BedLines = {}
+	for i, bed in ipairs(Beds) do
+		local Line = string.format('\t{ Coords = vec4(%.2f,%.2f,%.2f,%.2f), Invert = 0.0 },',
+			bed.Coords[1], bed.Coords[2], bed.Coords[3], bed.Coords[4])
+		table.insert(BedLines, Line)
+	end
+	local BedText = table.concat(BedLines, "\n")
+
+	local FullCode = string.format([[-- BEDS
+
+%s]],
+		BedText
+	)
+
+	vKEYBOARD.Copy(source,"Código:",FullCode)
+	vCLIENT.ClearBedPreviews(source)
+	TriggerClientEvent("Notify",source,"Sucesso",("Código gerado com %d maca(s)!"):format(#Beds),"verde",10000)
+end)
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- ADDLSCUSTOMS
+-----------------------------------------------------------------------------------------------------------------------------------------
+RegisterCommand("addlscustoms",function(source,Message)
+	local Passport = vRP.Passport(source)
+	if not Passport or not vRP.HasGroup(Passport,"Admin") then
+		return false
+	end
+
+	local Keyboard = vKEYBOARD.Secondary(source,"Nome da Logo (Ex: lscustoms.png)","Permissão (Opcional)")
+	if not Keyboard or not Keyboard[1] then
+		return false
+	end
+
+	local Logo = Keyboard[1]
+	local Permission = Keyboard[2]
+	local VEHICLE_PREVIEW_HASH = "sultanrs"
+	local CollectedCoords = {}
+	local Active = true
+	local Count = 0
+
+	TriggerClientEvent("Notify",source,"Aviso","Posicione o veículo e pressione H para confirmar. Pressione F ou ESC para finalizar.","amarelo",5000)
+
+	while Active do
+		Count = Count + 1
+		local Success,Coords = vCLIENT.PositionGarageSpawn(source,VEHICLE_PREVIEW_HASH)
+
+		if Success and Coords and #Coords >= 4 then
+			table.insert(CollectedCoords, Coords)
+			TriggerClientEvent("Notify",source,"Sucesso",("Local %d adicionado!"):format(Count),"verde",3000)
+		else
+			Active = false
+		end
+	end
+
+	if #CollectedCoords > 0 then
+		local Output = ""
+		for _, Coords in ipairs(CollectedCoords) do
+			Output = Output .. "	{\n"
+			Output = Output .. string.format('		Logo = "%s",\n', Logo)
+			
+			if Permission and Permission ~= "" then
+				Output = Output .. string.format('		Permission = "%s",\n', Permission)
+			else
+				Output = Output .. '		--Permission = "Mecanico",\n'
+			end
+
+			Output = Output .. string.format('		Coords = vec4(%.2f,%.2f,%.2f,%.2f)\n', Coords[1], Coords[2], Coords[3] + 1, Coords[4])
+			Output = Output .. "	},\n"
+		end
+
+		vKEYBOARD.Copy(source,"Código LSCustoms:",Output)
+		TriggerClientEvent("Notify",source,"Sucesso",("Código gerado com %d locais!"):format(#CollectedCoords),"verde",5000)
+	else
+		TriggerClientEvent("Notify",source,"Erro","Cancelado.","vermelho",5000)
+	end
+
+	vCLIENT.ClearGarageSpawns(source)
 end)

@@ -222,7 +222,7 @@ end
 function Creative.Revive(TargetPassport)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport, Config.Administrator) then
+	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
 		return false
 	end
 
@@ -253,7 +253,8 @@ end
 function Creative.Kill(TargetPassport)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
@@ -280,188 +281,8 @@ end
 function Creative.Freeze(TargetPassport)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
-
-	TargetPassport = parseInt(TargetPassport)
-	if TargetPassport <= 0 then
-		return false
-	end
-
-	local TargetSource = vRP.Source(TargetPassport)
-	if not TargetSource then
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao esta online.","amarelo")
-		return false
-	end
-
-	local IsFrozen = FrozenPlayers[TargetSource] or false
-	
-	FrozenPlayers[TargetSource] = not IsFrozen
-	
-	TriggerClientEvent("ticket:Freeze",TargetSource,not IsFrozen)
-	
-	if not IsFrozen then
-		TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce congelou #%s - %s."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-	else
-		TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce descongelou #%s - %s."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-	end
-
-	return true
-end
------------------------------------------------------------------------------------------------------------------------------------------
--- GOTO
------------------------------------------------------------------------------------------------------------------------------------------
-function Creative.Goto(TargetPassport)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
-
-	TargetPassport = parseInt(TargetPassport)
-	if TargetPassport <= 0 then
-		return false
-	end
-
-	local TargetSource = vRP.Source(TargetPassport)
-	if not TargetSource then
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao esta online.","amarelo")
-		return false
-	end
-
-	if vRP.DoesEntityExist(TargetSource) then
-		local Ped = GetPlayerPed(TargetSource)
-		local Coords = GetEntityCoords(Ped)
-		
-		if Coords then
-			vRP.Teleport(Source,Coords.x,Coords.y,Coords.z)
-			TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce foi teleportado para #%s - %s."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-		else
-			TriggerClientEvent("ticket:Notify",Source,"Atencao","Nao foi possivel obter as coordenadas do jogador.","amarelo")
-		end
-	else
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao existe.","amarelo")
-	end
-
-	return true
-end
------------------------------------------------------------------------------------------------------------------------------------------
--- BRING
------------------------------------------------------------------------------------------------------------------------------------------
-function Creative.Bring(TargetPassport)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
-
-	TargetPassport = parseInt(TargetPassport)
-	if TargetPassport <= 0 then
-		return false
-	end
-
-	local TargetSource = vRP.Source(TargetPassport)
-	if not TargetSource then
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao esta online.","amarelo")
-		return false
-	end
-
-	if vRP.DoesEntityExist(Source) and vRP.DoesEntityExist(TargetSource) then
-		local Ped = GetPlayerPed(Source)
-		local Coords = GetEntityCoords(Ped)
-
-		if Coords then
-			vRP.Teleport(TargetSource,Coords.x,Coords.y,Coords.z)
-			TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce trouxe #%s - %s ate voce."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-		else
-			TriggerClientEvent("ticket:Notify",Source,"Atencao","Nao foi possivel obter as coordenadas.","amarelo")
-		end
-	else
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao existe.","amarelo")
-	end
-
-	return true
-end
------------------------------------------------------------------------------------------------------------------------------------------
--- WAYPOINT
------------------------------------------------------------------------------------------------------------------------------------------
-function Creative.Waypoint(TargetPassport)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
-
-	TargetPassport = parseInt(TargetPassport)
-	if TargetPassport <= 0 then
-		return false
-	end
-
-	local TargetSource = vRP.Source(TargetPassport)
-	if not TargetSource then
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao esta online.","amarelo")
-		return false
-	end
-
-	local TrackingKey = Source..":"..TargetPassport
-	
-	if WaypointTracking[TrackingKey] then
-		WaypointTracking[TrackingKey] = nil
-		TriggerClientEvent("ticket:StopWaypoint",Source)
-		TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce parou de rastrear #%s - %s."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-		return true
-	end
-
-	WaypointTracking[TrackingKey] = {
-		AdminSource = Source,
-		TargetSource = TargetSource,
-		TargetPassport = TargetPassport
-	}
-
-	TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce esta rastreando #%s - %s no mapa."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-	
-	local Coords = vRP.GetEntityCoords(TargetSource)
-	if Coords then
-		TriggerClientEvent("ticket:Waypoint",Source,Coords.x,Coords.y,true)
-	end
-
-	return true
-end
------------------------------------------------------------------------------------------------------------------------------------------
--- KILL
------------------------------------------------------------------------------------------------------------------------------------------
-function Creative.Kill(TargetPassport)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
-
-	TargetPassport = parseInt(TargetPassport)
-	if TargetPassport <= 0 then
-		return false
-	end
-
-	local TargetSource = vRP.Source(TargetPassport)
-	if not TargetSource then
-		TriggerClientEvent("ticket:Notify",Source,"Atencao","Jogador nao esta online.","amarelo")
-		return false
-	end
-
-	vRPC.SetHealth(TargetSource,0)
-
-	TriggerClientEvent("ticket:Notify",Source,"Sucesso",("Voce matou #%s - %s."):format(TargetPassport,vRP.FullName(TargetPassport)),"verde")
-
-	return true
-end
------------------------------------------------------------------------------------------------------------------------------------------
--- FREEZE
------------------------------------------------------------------------------------------------------------------------------------------
-function Creative.Freeze(TargetPassport)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
@@ -678,7 +499,8 @@ end
 function Creative.AddGroup(TargetPassport,Group,Hierarchy)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
@@ -721,7 +543,8 @@ end
 function Creative.RemoveGroup(TargetPassport,Group)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
@@ -835,13 +658,14 @@ end
 -- BANK
 -----------------------------------------------------------------------------------------------------------------------------------------
 function Creative.Bank(TargetPassport,Amount,Type)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
+    local Source = source
+    local Passport = vRP.Passport(Source)
+    if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
+        return false
+    end
 
-	TargetPassport = parseInt(TargetPassport)
+    TargetPassport = parseInt(TargetPassport)
 	Amount = parseInt(Amount or 0)
 
 	if TargetPassport <= 0 or Amount <= 0 then
@@ -873,13 +697,14 @@ end
 -- GEMSTONE
 -----------------------------------------------------------------------------------------------------------------------------------------
 function Creative.Gemstone(TargetPassport,Amount,Type)
-	local Source = source
-	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) then
-		return false
-	end
+    local Source = source
+    local Passport = vRP.Passport(Source)
+    if not Passport or not vRP.HasPermission(Passport,"Admin",2) then
+        TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
+        return false
+    end
 
-	TargetPassport = parseInt(TargetPassport)
+    TargetPassport = parseInt(TargetPassport)
 	Amount = parseInt(Amount or 0)
 
 	if TargetPassport <= 0 or Amount <= 0 then
@@ -940,7 +765,8 @@ end
 function Creative.SetTime(Data)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) or type(Data) ~= "table" then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) or type(Data) ~= "table" then
+		TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
@@ -953,12 +779,13 @@ function Creative.SetTime(Data)
 	return true
 end
 -----------------------------------------------------------------------------------------------------------------------------------------
--- SET WEATHER
+-- SETWEATHER
 -----------------------------------------------------------------------------------------------------------------------------------------
 function Creative.SetWeather(Data)
 	local Source = source
 	local Passport = vRP.Passport(Source)
-	if not Passport or not vRP.HasPermission(Passport,Config.Administrator) or type(Data) ~= "table" then
+	if not Passport or not vRP.HasPermission(Passport,"Admin",2) or type(Data) ~= "table" then
+		TriggerClientEvent("ticket:Notify",Source,"Atencao","Você não possui permissão.","vermelho")
 		return false
 	end
 
